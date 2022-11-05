@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:english_words/english_words.dart';
 
@@ -16,16 +18,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Startup Namer Generator',
-      // Scaffold is a Material widget that provides an default app bar
-      // and hold the "tree" for the home screen
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Startup Namer Generator'),
-        ),
-        body: const Center(
-          child: RandomWords(),
-        ),
-      ),
+      theme: ThemeData(
+          appBarTheme: const AppBarTheme(
+              centerTitle: true,
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white)),
+      home: const RandomWords(),
     );
   }
 }
@@ -39,28 +37,90 @@ class RandomWords extends StatefulWidget {
 
 class _RandomWordsState extends State<RandomWords> {
   final _suggestions = <WordPair>[];
-  final _biggetFont = const TextStyle(fontSize: 18);
+  final _saved = <WordPair>{};
+  final _biggerFont = const TextStyle(fontSize: 18);
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16.0),
-      itemBuilder: (context, i) {
-        if (i.isOdd) return const Divider();
+    void _pushSaved() {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) {
+            // creates a list tile for each saved word with map
+            final savedWords = _saved.map(
+              (currentWord) {
+                return ListTile(
+                  title: Text(
+                    currentWord.asPascalCase,
+                    style: _biggerFont,
+                  ),
+                );
+              },
+            );
 
-        final index = i ~/ 2;
+            final divided = savedWords.isNotEmpty
+                ? ListTile.divideTiles(
+                    context: context,
+                    tiles: savedWords,
+                  ).toList()
+                : <Widget>[];
 
-        if (index >= _suggestions.length) {
-          _suggestions.addAll(generateWordPairs().take(10));
-        }
+            return Scaffold(
+              appBar: AppBar(
+                title: const Text('Saved Suggestions'),
+              ),
+              body: ListView(children: divided),
+            );
+          },
+        ),
+      );
+    }
 
-        return ListTile(
-          title: Text(
-            _suggestions[index].asPascalCase,
-            style: _biggetFont,
-          ),
-        );
-      },
-    );
+    return Scaffold(
+        appBar: AppBar(
+          title: const Text('Startup Name Generator'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.list),
+              onPressed: _pushSaved,
+              tooltip: 'Saved Suggestions',
+            ),
+          ],
+        ),
+        body: ListView.builder(
+          padding: const EdgeInsets.all(16.0),
+          itemBuilder: (context, i) {
+            if (i.isOdd) return const Divider();
+
+            final index = i ~/ 2;
+
+            if (index >= _suggestions.length) {
+              _suggestions.addAll(generateWordPairs().take(10));
+            }
+
+            final alreadySaved = _saved.contains(_suggestions[index]);
+
+            return ListTile(
+              title: Text(
+                _suggestions[index].asPascalCase,
+                style: _biggerFont,
+              ),
+              trailing: Icon(
+                alreadySaved ? Icons.favorite : Icons.favorite_border,
+                color: alreadySaved ? Colors.red : null,
+                semanticLabel: alreadySaved ? 'Remove fom saved' : 'Save',
+              ),
+              onTap: () {
+                setState(() {
+                  if (alreadySaved) {
+                    _saved.remove(_suggestions[index]);
+                  } else {
+                    _saved.add(_suggestions[index]);
+                  }
+                });
+              },
+            );
+          },
+        ));
   }
 }
